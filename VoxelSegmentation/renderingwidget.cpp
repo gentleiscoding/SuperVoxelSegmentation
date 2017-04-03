@@ -17,7 +17,7 @@
 #include <ctime>
 
 RenderingWidget::RenderingWidget(QWidget *parent, MainWindow* mainwindow)
-: QGLWidget(parent), ptr_mainwindow_(mainwindow), eye_distance_(2.0)
+: QGLWidget(parent), ptr_mainwindow_(mainwindow), eye_distance_(600.0)
 {
 	ptr_arcball_ = new CArcBall(width(), height());
 	eye_goal_.clear();
@@ -299,16 +299,25 @@ void RenderingWidget::Render()
 		}else
 		{
 			glEnable(GL_COLOR_MATERIAL);
-			glPointSize(1.2f);
+			glPointSize(1.0f);
 			glBegin(GL_POINTS);
 			size_t size=seg.list_center.size();
-			//draw every cluster with different color
+			//draw every cluster with different color in 3D
+			//for (int i=0;i<m*n;i++)
+			//{
+			//	glColor3f((float)image_info.vertex_rgb[i].r/255.0, (float)image_info.vertex_rgb[i].g/255.0, (float)image_info.vertex_rgb[i].b/255.0);
+			//	glVertex3f(seg.image_segmented.vertex_pos[i].x,seg.image_segmented.vertex_pos[i].y,seg.image_segmented.vertex_pos[i].z);
+			//	//glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
+			//}
+
+			//in 2d
 			for (int i=0;i<m*n;i++)
 			{
-				glColor3f((float)seg.image_segmented.vertex_rgb[i].r/255.0,(float)seg.image_segmented.vertex_rgb[i].g/255.0,(float)seg.image_segmented.vertex_rgb[i].b/255.0);
-				glVertex3f(seg.image_segmented.vertex_pos[i].x,seg.image_segmented.vertex_pos[i].y,seg.image_segmented.vertex_pos[i].z);
-				//glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
+				/*glColor3f((float)seg.image_segmented_2d.vertex_rgb[i].r/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].g/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].b/255.0);*/
+				glColor3f((float)seg.image_segmented.vertex_rgb[i].r/255.0, (float)seg.image_segmented.vertex_rgb[i].g/255.0, (float)seg.image_segmented.vertex_rgb[i].b/255.0);
+				glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
 			}
+			
 
 			//draw seed center with black 
 			/*glPointSize(5.0f);

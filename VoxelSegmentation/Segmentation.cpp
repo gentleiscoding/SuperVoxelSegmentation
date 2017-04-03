@@ -9,6 +9,7 @@ Segmentation::Segmentation(Image_Info image_info)
 {
 	image_original=image_info;
 	image_segmented=image_info;
+	image_segmented_2d=image_info;
 	int N=image_original.getN();
 	int M=image_original.getM();
 	int count=0;
@@ -25,8 +26,8 @@ Segmentation::Segmentation(Image_Info image_info)
 			count++;
 		}
 	}
-	color_importance=0.3;
-	spatial_importance=0.3;
+	color_importance=0.2;
+	spatial_importance=0.4;
 	normal_importance=0.0;
 	inital_normal();
 }
@@ -37,8 +38,8 @@ Segmentation::~Segmentation(void)
 
 void Segmentation::do_segment()
 {
-	Rseed=0.1;
-	Rresearch=0.2;
+	Rseed=0.2;
+	//Rresearch=0.4;
 	
 	int N=image_original.getN();
 	int M=image_original.getM();
@@ -61,6 +62,7 @@ void Segmentation::do_segment()
 		}
 	}
 	save_as_image();
+	mark_contours();
 }
 
 int Segmentation::build_seed(double revolution)
@@ -75,8 +77,9 @@ int Segmentation::build_seed(double revolution)
 	{
 		for(int i=0;i<M;i+=col_cluster)
 		{
-			list_center.push_back(j*M+M-i-1);
-			cout<<"x:"<<j<<" y:"<<i<<endl;
+			int center_=find_min_gradient(j*M+M-i-1);
+			list_center.push_back(center_);
+			//cout<<"x:"<<j<<" y:"<<i<<endl;
 			count++;
 		}
 	}
@@ -110,7 +113,7 @@ void Segmentation::find_neighbors(int current_voxel,int count_seed,vector<int>& 
 				{
 					int adj_index=x_adj_index*M+M-y_adj_index-1;
 						//judge whether it is in the range 
-						if (distance_between(list_center[count_seed],adj_index)<=(Rresearch))
+						if (distance_between(list_center[count_seed],adj_index)<=(sqrt(3.0)*Rseed))
 						{
 							if (list_seg[adj_index]!=count_seed)
 							{
@@ -190,6 +193,11 @@ double Segmentation::distance_between(int voxel1,int voxel2)
 
 double Segmentation::caculate_D(int voxel1,int voxel2)
 {
+	/*lab_ v1={0.0,0.0,0.0};
+	lab_ v2={0.0,0.0,0.0};
+	RGB2Lab(image_original.vertex_rgb[voxel1].r,image_original.vertex_rgb[voxel1].g,image_original.vertex_rgb[voxel1].b,v1.l,v1.a,v1.b);
+	RGB2Lab(image_original.vertex_rgb[voxel2].r,image_original.vertex_rgb[voxel2].g,image_original.vertex_rgb[voxel2].b,v2.l,v2.a,v2.b);
+	double Dc=sqrt((v1.l-v2.l)*(v1.l-v2.l)+(v1.a-v2.a)*(v1.a-v2.a)+(v1.b-v2.b)*(v1.b-v2.b));*/
 	double Dc=(image_original.vertex_rgb[voxel1].r-image_original.vertex_rgb[voxel2].r)/3+(image_original.vertex_rgb[voxel1].g-image_original.vertex_rgb[voxel2].g)/3+(image_original.vertex_rgb[voxel1].b-image_original.vertex_rgb[voxel2].b)/3;
 	double Ds=distance_between(voxel1,voxel2);
 	double dominator=(list_normal[voxel1].x*list_normal[voxel1].x+list_normal[voxel1].y*list_normal[voxel1].y+list_normal[voxel1].z*list_normal[voxel1].z)*(list_normal[voxel2].x*list_normal[voxel2].x+list_normal[voxel2].y*list_normal[voxel2].y+list_normal[voxel2].z*list_normal[voxel2].z);
@@ -413,4 +421,155 @@ void Segmentation::delete_voxel(int count_seed,int current_voxel)
 		}
 	}
 	list_seed[count_seed].erase(list_seed[count_seed].begin()+i);
+}
+
+void Segmentation::mark_contours()
+{
+	const int dx8[8] = {-1, -1,  0,  1, 1, 1, 0, -1};
+	const int dy8[8] = { 0, -1, -1, -1, 0, 1, 1,  1};
+	int N=image_original.getN();
+	int M=image_original.getM();
+	for (int x=0;x<N;x++)
+	{
+		for(int y=0;y<M;y++)
+		{
+			int voxel=x*M+M-1-y;
+			int seg=list_seg[voxel];
+			bool check_=true;
+			for(int k=0;k<8;k++)
+			{
+				int x_adj=x+dx8[k];
+				int y_adj=y+dx8[k];
+				int current_voxel=x_adj*M+M-1-y_adj;
+				if (x_adj<0||x_adj>=N||y_adj<0||y_adj>=M)
+				{
+					list_contours.push_back(voxel);
+					check_=false;
+				}else
+				{
+					if (list_seg[current_voxel]!=seg)
+					{
+						list_contours.push_back(voxel);
+						check_=false;
+					}
+				}
+				if (check_==false)
+				{
+					break;
+				}
+			}
+		}
+	}
+	for (size_t i=0;i<list_contours.size();i++)
+	{
+		int voxel=list_contours[i];
+		image_segmented_2d.vertex_rgb[voxel].r=255;
+		image_segmented_2d.vertex_rgb[voxel].g=255;
+		image_segmented_2d.vertex_rgb[voxel].b=255;
+	}
+
+}
+void Segmentation::RGB2Lab(double R, double G, double B, double &L, double &a, double &b)
+{
+	double X, Y, Z, fX, fY, fZ;
+	double BLACK = 20;
+	double YELLOW = 70;
+	X = 0.412453*R + 0.357580*G + 0.180423*B;
+	Y = 0.212671*R + 0.715160*G + 0.072169*B;
+	Z = 0.019334*R + 0.119193*G + 0.950227*B;
+
+	X /= (255 * 0.950456);
+	Y /=  255;
+	Z /= (255 * 1.088754);
+
+	if (Y > 0.008856)
+	{
+		fY = pow(Y, 1.0/3.0);
+		L = 116.0*fY - 16.0;
+	}
+	else
+	{
+		fY = 7.787*Y + 16.0/116.0;
+		L = 903.3*Y;
+	}
+
+	if (X > 0.008856)
+		fX = pow(X, 1.0/3.0);
+	else
+		fX = 7.787*X + 16.0/116.0;
+
+	if (Z > 0.008856)
+		fZ = pow(Z, 1.0/3.0);
+	else
+		fZ = 7.787*Z + 16.0/116.0;
+
+	a = 500.0*(fX - fY);
+	b = 200.0*(fY - fZ);
+
+	if (L < BLACK) 
+	{
+		a *= exp((L - BLACK) / (BLACK / 4));
+		b *= exp((L - BLACK) / (BLACK / 4));
+		L = BLACK;
+	}
+	if (b > YELLOW)
+		b = YELLOW;
+
+
+}
+
+int Segmentation::find_min_gradient(int voxel)
+{
+	int x=image_original.vertex_index[voxel].x;
+	int y=image_original.vertex_index[voxel].y;
+	int N=image_original.getN();
+	int M=image_original.getM();
+	double min_gradient=99999;
+	int		min_voxel=voxel;
+	for (int x_adj=x-1;x_adj<=x+1;x_adj++)
+	{
+		for (int y_adj=y-1;y_adj<=y+1;y_adj++)
+		{
+			if (x_adj>=0&&x_adj<N&&y_adj<M&&y_adj>=0)
+			{
+				int current_voxel=x_adj*M+M-1-y_adj;
+				double gradient_=caculate_gradient(current_voxel);
+				if (gradient_<min_gradient)
+				{
+					min_gradient=gradient_;
+					min_voxel=current_voxel;
+				}
+			}
+		}
+		
+	}
+	return min_voxel;
+}
+
+double Segmentation::caculate_gradient(int voxel)
+{
+
+	int x=image_original.vertex_index[voxel].x;
+	int y=image_original.vertex_index[voxel].y;
+	int N=image_original.getN();
+	int M=image_original.getM();
+	int count=0;
+	double	addition_=0;
+	for (int x_adj=x-1;x_adj<=x+1;x_adj++)
+	{
+		for (int y_adj=y-1;y_adj<=y+1;y_adj++)
+		{
+			if (x_adj>=0&&x_adj<N&&y_adj<M&&y_adj>=0)
+			{
+				int current_voxel=x_adj*M+M-1-y_adj;
+				count++;
+				lab_ v1={0.0,0.0,0.0};
+				lab_ v2={0.0,0.0,0.0};
+				RGB2Lab(image_original.vertex_rgb[current_voxel].r,image_original.vertex_rgb[current_voxel].g,image_original.vertex_rgb[current_voxel].b,v1.l,v1.a,v1.b);
+				RGB2Lab(image_original.vertex_rgb[voxel].r,image_original.vertex_rgb[voxel].g,image_original.vertex_rgb[voxel].b,v2.l,v2.a,v2.b);
+				addition_+=sqrt((v1.l-v2.l)*(v1.l-v2.l)+(v1.a-v2.a)*(v1.a-v2.a)+(v1.b-v2.b)*(v1.b-v2.b));
+			}
+		}
+	}
+	return addition_/count;
 }

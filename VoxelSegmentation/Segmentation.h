@@ -3,7 +3,7 @@
 #include<math.h>
 #include <queue>  
 typedef struct{ double x; double y; double z; } normal_;
-
+typedef struct{ double l; double a; double b; } lab_;
 class Segmentation
 {
 public:
@@ -22,12 +22,16 @@ public:
 	void		inital_normal();
 	void		save_as_image();
 	normal_		caculate_normal(int voxel1,int voxel2,int voxel3);
-
+	void		mark_contours();
+	void		RGB2Lab(double,double,double,double&,double&,double&);
+	int			find_min_gradient(int);
+	double		caculate_gradient(int);
 
 public:
 	//image
 	Image_Info		image_original;
 	Image_Info		image_segmented;
+	Image_Info		image_segmented_2d;
 	vector<bool>	selected_label;
 
 	//Rseed
@@ -49,5 +53,7 @@ public:
 	double spatial_importance;
 	double normal_importance;
 	
+	//contours
+	vector<int>	list_contours;
 };
 

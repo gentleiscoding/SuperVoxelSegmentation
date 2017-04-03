@@ -27,7 +27,7 @@ Segmentation::Segmentation(Image_Info image_info)
 	}
 	color_importance=0.3;
 	spatial_importance=0.3;
-	normal_importance=0.1;
+	normal_importance=0.0;
 	inital_normal();
 }
 
@@ -37,11 +37,14 @@ Segmentation::~Segmentation(void)
 
 void Segmentation::do_segment()
 {
-	Rseed=0.3;
-	Rresearch=0.5;
-
+	Rseed=0.1;
+	Rresearch=0.2;
+	
 	int N=image_original.getN();
 	int M=image_original.getM();
+
+	list_seg.resize(M*N,-1);
+	list_D.resize(M*N,-1);
 	selected_label.resize(M*N,true);
 	int seed_amount = build_seed(Rseed);
 	bool check_end=false;
@@ -78,26 +81,26 @@ int Segmentation::build_seed(double revolution)
 		}
 	}
 	list_seed.resize(count);
-	ajacency_D.resize(count);
 	list_ajacency.resize(count);
 
 	for (int i=0;i<count;i++)
 	{
 		list_seed[i].push_back(list_center[i]);
-		find_neighbors(list_center[i],i);
+		find_neighbors(list_center[i],i,list_ajacency[i]);
+		size_t k=list_ajacency[i].size();
+		int ll=0;
 	}
 
 	return count;
 }
 
 //count is the number of seed
-void Segmentation::find_neighbors(int current_voxel,int count_seed)
+void Segmentation::find_neighbors(int current_voxel,int count_seed,vector<int>& temp_list)
 {
 	int N=image_original.getN();
 	int M=image_original.getM();
 	int x_index=image_original.vertex_index[current_voxel].x;
 	int y_index=image_original.vertex_index[current_voxel].y;
-
 	
 	for (int x_adj_index=x_index-1;x_adj_index<=x_index+1;x_adj_index++)
 	{
@@ -109,9 +112,9 @@ void Segmentation::find_neighbors(int current_voxel,int count_seed)
 						//judge whether it is in the range 
 						if (distance_between(list_center[count_seed],adj_index)<=(Rresearch))
 						{
-							if (selected_label[adj_index]==true)
+							if (list_seg[adj_index]!=count_seed)
 							{
-								insert_ajacenncy(count_seed,adj_index);
+								temp_list.push_back(adj_index);
 							}
 							
 						}
@@ -121,60 +124,56 @@ void Segmentation::find_neighbors(int current_voxel,int count_seed)
 	}
 }
 
-void Segmentation::insert_ajacenncy(int count_seed,int adj_index)
-{
-	size_t i=0;
-	double D=caculate_D(list_center[count_seed],adj_index);
-	for (;i<list_ajacency[count_seed].size();i++)
-	{
-		if (D>ajacency_D[count_seed][i])
-		{
-			break;
-		}
-	}
-	if (i==list_ajacency[count_seed].size())
-	{
-		list_ajacency[count_seed].push_back(adj_index);
-		ajacency_D[count_seed].push_back(D);
-	}else
-	{
-		list_ajacency[count_seed].insert(list_ajacency[count_seed].begin()+i,adj_index);
-		ajacency_D[count_seed].insert(ajacency_D[count_seed].begin()+i,D);
-	}
-}
+//void Segmentation::insert_ajacenncy(int count_seed,int adj_index)
+//{
+//	size_t i=0;
+//	double D=caculate_D(list_center[count_seed],adj_index);
+//	for (;i<list_ajacency[count_seed].size();i++)
+//	{
+//		if (D>ajacency_D[count_seed][i])
+//		{
+//			break;
+//		}
+//	}
+//	if (i==list_ajacency[count_seed].size())
+//	{
+//		list_ajacency[count_seed].push_back(adj_index);
+//		ajacency_D[count_seed].push_back(D);
+//	}else
+//	{
+//		list_ajacency[count_seed].insert(list_ajacency[count_seed].begin()+i,adj_index);
+//		ajacency_D[count_seed].insert(ajacency_D[count_seed].begin()+i,D);
+//	}
+//}
 
 bool Segmentation::generate_seed(int count_seed)
 {
-	/*if (list_ajacency[count_seed].size()==0)
+	bool flag=true;
+	vector<int> list_temp_adj;
+	if (list_ajacency[count_seed].size()==0)
 	{
 		return true;
 	}
-	int min_ajacency=list_ajacency[count_seed][list_ajacency[count_seed].size()-1];
-	list_ajacency[count_seed].pop_back();
-	double D=ajacency_D[count_seed][ajacency_D[count_seed].size()-1];
-	ajacency_D[count_seed].pop_back();*/
-	bool flag=false;
-	int min_ajacency=0;
-	while(flag==false)
+	for (size_t i=0;i<list_ajacency[count_seed].size();i++)
 	{
-		if (list_ajacency[count_seed].size()==0)
+		int current_voxel=list_ajacency[count_seed][i];
+		double temp_D=caculate_D(list_center[count_seed],current_voxel);
+		if (list_D[current_voxel]==-1||temp_D<list_D[current_voxel])
 		{
-			return true;
+			if (temp_D<list_D[current_voxel])
+			{
+				int placed_count=list_seg[current_voxel];
+				delete_voxel(placed_count,current_voxel);
+			}
+			list_D[current_voxel]=temp_D;
+			list_seg[current_voxel]=count_seed;
+			list_seed[count_seed].push_back(current_voxel);
+			find_neighbors(current_voxel,count_seed,list_temp_adj);
+			flag=false;
 		}
-		min_ajacency=list_ajacency[count_seed][list_ajacency[count_seed].size()-1];
-		list_ajacency[count_seed].pop_back();
-		//D=ajacency_D[count_seed][ajacency_D[count_seed].size()-1];
-		ajacency_D[count_seed].pop_back();
-		flag=selected_label[min_ajacency];
 	}
-	if (selected_label[min_ajacency]==true)
-	{
-		selected_label[min_ajacency]=false;
-		list_seed[count_seed].push_back(min_ajacency);
-		find_neighbors(min_ajacency,count_seed);
-		return false;
-	}
-
+	list_ajacency[count_seed]=list_temp_adj;
+	return flag;
 }
 
 double Segmentation::distance_between(int voxel1,int voxel2)
@@ -402,3 +401,16 @@ normal_ Segmentation::caculate_normal(int voxel1,int adj1,int adj2)
 	normal_ a={normal_x_/demoninator,normal_y_/demoninator,normal_z_/demoninator};
 	return a;
 }  
+
+void Segmentation::delete_voxel(int count_seed,int current_voxel)
+{
+	size_t i=0;
+	for (;i<list_seed[count_seed].size();i++)
+	{
+		if (current_voxel==list_seed[count_seed][i])
+		{
+			break;
+		}
+	}
+	list_seed[count_seed].erase(list_seed[count_seed].begin()+i);
+}

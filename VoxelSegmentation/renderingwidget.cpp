@@ -17,14 +17,14 @@
 #include <ctime>
 
 RenderingWidget::RenderingWidget(QWidget *parent, MainWindow* mainwindow)
-: QGLWidget(parent), ptr_mainwindow_(mainwindow), eye_distance_(600.0)
+: QGLWidget(parent), ptr_mainwindow_(mainwindow), eye_distance_(0.0)
 {
 	ptr_arcball_ = new CArcBall(width(), height());
 	eye_goal_.clear();
 	eye_goal_.resize(3);
 	eye_goal_[0]=(0.0);
 	eye_goal_[1]=(0.0);
-	eye_goal_[2]=(0.0);
+	eye_goal_[2]=(-3.0);
 	eye_direction_.clear();
 	eye_direction_.resize(3);
 	eye_direction_[0]=(0.0);
@@ -272,6 +272,10 @@ void RenderingWidget::Do_Segmentation()
 	seg=Segmentation(image_info);
 	seg.do_segment();
 	check_segment=true;
+	ChildWindow *child1=new ChildWindow(seg.image_segmented,1200,50);
+	child1->show();
+	ChildWindow *child2=new ChildWindow(seg.image_segmented_2d,1200,500);
+	child2->show();
 
 }
 
@@ -303,20 +307,20 @@ void RenderingWidget::Render()
 			glBegin(GL_POINTS);
 			size_t size=seg.list_center.size();
 			//draw every cluster with different color in 3D
-			//for (int i=0;i<m*n;i++)
-			//{
-			//	glColor3f((float)image_info.vertex_rgb[i].r/255.0, (float)image_info.vertex_rgb[i].g/255.0, (float)image_info.vertex_rgb[i].b/255.0);
-			//	glVertex3f(seg.image_segmented.vertex_pos[i].x,seg.image_segmented.vertex_pos[i].y,seg.image_segmented.vertex_pos[i].z);
-			//	//glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
-			//}
-
-			//in 2d
 			for (int i=0;i<m*n;i++)
 			{
-				/*glColor3f((float)seg.image_segmented_2d.vertex_rgb[i].r/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].g/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].b/255.0);*/
 				glColor3f((float)seg.image_segmented.vertex_rgb[i].r/255.0, (float)seg.image_segmented.vertex_rgb[i].g/255.0, (float)seg.image_segmented.vertex_rgb[i].b/255.0);
-				glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
+				glVertex3f(seg.image_segmented.vertex_pos[i].x,seg.image_segmented.vertex_pos[i].y,seg.image_segmented.vertex_pos[i].z);
+				//glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
 			}
+
+			//in 2d
+			//for (int i=0;i<m*n;i++)
+			//{
+			//	/*glColor3f((float)seg.image_segmented_2d.vertex_rgb[i].r/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].g/255.0,(float)seg.image_segmented_2d.vertex_rgb[i].b/255.0);*/
+			//	glColor3f((float)seg.image_segmented.vertex_rgb[i].r/255.0, (float)seg.image_segmented.vertex_rgb[i].g/255.0, (float)seg.image_segmented.vertex_rgb[i].b/255.0);
+			//	glVertex3f(image_info.vertex_index[i].x-n/2,image_info.vertex_index[i].y-m/2,0);
+			//}
 			
 
 			//draw seed center with black 
@@ -328,6 +332,7 @@ void RenderingWidget::Render()
 				glVertex3f(image_info.vertex_pos[v].x,image_info.vertex_pos[v].y,image_info.vertex_pos[v].z);
 			}*/
 			glEnd();
+
 		}
 
 }

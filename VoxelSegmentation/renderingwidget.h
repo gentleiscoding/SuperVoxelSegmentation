@@ -5,6 +5,7 @@
 #include <QEvent>
 #include "Image_Info.h"
 #include "Segmentation.h"
+#include "childwindow.h"
 class MainWindow;
 class CArcBall;
 

@@ -1,0 +1,23 @@
+<UI version="4.0" >
+ <class>ImageWidge</class>
+ <widget class="QWidget" name="ImageWidge" >
+  <property name="objectName" >
+   <string notr="true">ImageWidge</string>
+  </property>
+  <property name="geometry" >
+   <rect>
+	<x>0</x>
+	<y>0</y>
+	<width>400</width>
+	<height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>ImageWidge</string>
+  </property>  
+ </widget>
+ <layoutDefault spacing="6" margin="11" />
+ <pixmapfunction></pixmapfunction>
+ <resources/>
+ <connections/>
+</UI>

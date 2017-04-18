@@ -2,8 +2,9 @@
 #include"Image_Info.h"
 #include<math.h>
 #include <queue>  
-typedef struct{ double x; double y; double z; } normal_;
+
 typedef struct{ double l; double a; double b; } lab_;
+typedef struct{ double x; double y; double z; double r; double g; double b;double normal_x;double normal_y;double normal_z;}center_features ;
 class Segmentation
 {
 public:
@@ -16,16 +17,17 @@ public:
 	bool		generate_seed(int);
 	void		find_neighbors(int,int,vector<int>&);
 	void		insert_ajacenncy(int,int);
-	double		caculate_D(int,int);
-	double		distance_between(int,int);
+	double		caculate_D(center_features,int);
+	double		distance_between(center_features,int);
+	double		distance_between_(center_features,int);
 	void		delete_voxel(int,int);
-	void		inital_normal();
 	void		save_as_image();
-	normal_		caculate_normal(int voxel1,int voxel2,int voxel3);
 	void		mark_contours();
 	void		RGB2Lab(double,double,double,double&,double&,double&);
 	int			find_min_gradient(int);
 	double		caculate_gradient(int);
+	double		caculate_Dn(int,int);
+	void		update_center(int);
 
 public:
 	//image
@@ -39,11 +41,11 @@ public:
 	double				Rresearch;
 
 	//list for segmentation
-	vector<int>					list_center;
+	vector<int>					list_center_init;
+	vector<center_features>		list_center;
 	vector<vector<int>>			list_seed;
 
 	vector<vector<int>>			list_ajacency;
-	vector<normal_>				list_normal;
 	vector<int>					list_seg;
 	vector<double>				list_D;
 	
